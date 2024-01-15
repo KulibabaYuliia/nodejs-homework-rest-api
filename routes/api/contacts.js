@@ -14,6 +14,10 @@ router.delete("/:contactId", contactsOpt.removeContact);
 
 router.put("/:contactId", jsonParser, contactsOpt.updateContact);
 
-router.patch("/:contactId", jsonParser, contactsOpt.updateFavoriteContact);
+router.patch(
+  "/:contactId/favorite",
+  jsonParser,
+  contactsOpt.updateFavoriteContact
+);
 
 module.exports = router;
