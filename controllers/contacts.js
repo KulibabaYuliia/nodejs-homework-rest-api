@@ -1,41 +1,5 @@
-// const fs = require("node:fs/promises");
-// const path = require("node:path");
-// const crypto = require("node:crypto");
 const Contacts = require("../models/contacts");
-
-const Joi = require("joi");
-
-const contactSchema = Joi.object({
-  name: Joi.string().required().messages({
-    "any.required": `missing required name field`,
-  }),
-  email: Joi.string().email().required().messages({
-    "any.required": `missing required email field`,
-  }),
-  phone: Joi.string().required().messages({
-    "any.required": `missing required phone field`,
-  }),
-});
-
-const contactUpdateSchema = Joi.object({
-  name: Joi.string(),
-  email: Joi.string().email(),
-  phone: Joi.string(),
-})
-  .required()
-  .min(1)
-  .messages({
-    "object.min": "missing fields",
-  });
-
-const contactUpdateFavoriteSchema = Joi.object({
-  favorite: Joi.boolean(),
-})
-  .required()
-  .min(1)
-  .messages({
-    "object.min": "missing field favorite",
-  });
+const JoiSchems = require("../models/joi");
 
 async function listContacts(_req, res, next) {
   try {
@@ -65,7 +29,9 @@ async function getContactById(req, res, next) {
 
 async function addContact(req, res, next) {
   try {
-    const response = contactSchema.validate(req.body, { abortEarly: false });
+    const response = JoiSchems.contactSchema.validate(req.body, {
+      abortEarly: false,
+    });
 
     if (typeof response.error !== "undefined") {
       return res
@@ -98,7 +64,7 @@ async function removeContact(req, res, next) {
 
 async function updateContact(req, res, next) {
   try {
-    const response = contactUpdateSchema.validate(req.body, {
+    const response = JoiSchems.contactUpdateSchema.validate(req.body, {
       abortEarly: false,
     });
 
@@ -125,7 +91,7 @@ async function updateContact(req, res, next) {
 
 async function updateFavoriteContact(req, res, next) {
   try {
-    const response = contactUpdateFavoriteSchema.validate(req.body, {
+    const response = JoiSchems.contactUpdateFavoriteSchema.validate(req.body, {
       abortEarly: false,
     });
 
