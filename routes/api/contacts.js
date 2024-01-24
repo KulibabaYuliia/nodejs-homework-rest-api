@@ -6,8 +6,6 @@ const isValidId = require("../../middlewares/isValidId.js");
 
 const jsonParser = express.json();
 
-// contactsOpt.listContacts;
-
 router.get("/", contactsOpt.listContacts);
 
 router.get("/:contactId", isValidId, contactsOpt.getContactById);

@@ -10,9 +10,7 @@ const contactSchema = Joi.object({
   phone: Joi.string().required().messages({
     "any.required": `missing required phone field`,
   }),
-  favorite: Joi.boolean().required().messages({
-    "any.required": `missing required favorite field`,
-  }),
+  favorite: Joi.boolean(),
 });
 
 const contactUpdateSchema = Joi.object({
@@ -36,8 +34,28 @@ const contactUpdateFavoriteSchema = Joi.object({
     "object.min": "missing field favorite",
   });
 
+const userSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "any.required": `missing required email field`,
+  }),
+  password: Joi.string().required().messages({
+    "any.required": `missing required password field`,
+  }),
+});
+
+const subscriptionSchema = Joi.object({
+  subscription: Joi.string()
+    .valid("starter", "pro", "business")
+    .required()
+    .messages({
+      "any.required": `missing required subscription field`,
+    }),
+});
+
 module.exports = {
   contactSchema,
   contactUpdateSchema,
   contactUpdateFavoriteSchema,
+  userSchema,
+  subscriptionSchema,
 };
