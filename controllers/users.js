@@ -1,8 +1,14 @@
 const bcrypt = require("bcrypt");
+const gravatar = require("gravatar");
 const jwt = require("jsonwebtoken");
-const { userSchema, subscriptionSchema } = require("../models/joi");
+const fs = require("node:fs/promises");
+const path = require("node:path");
+const Jimp = require("jimp");
 
+const { userSchema, subscriptionSchema } = require("../models/joi");
 const User = require("../models/user");
+
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
 async function register(req, res, next) {
   const { email, password } = req.body;
@@ -26,7 +32,11 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const result = await User.create({ email, password: passwordHash });
+    const result = await User.create({
+      email,
+      avatarURL: gravatar.url(email, { protocol: "https" }),
+      password: passwordHash,
+    });
 
     res.status(201).json({
       user: { email: result.email, subscription: result.subscription },
@@ -70,7 +80,7 @@ async function login(req, res, next) {
 
     await User.findByIdAndUpdate(user._id, { token });
 
-    res.json({
+    res.status(200).json({
       token,
       user: {
         email: user.email,
@@ -130,4 +140,38 @@ async function subscription(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, current, subscription };
+async function upload(req, res, next) {
+  try {
+    const { _id } = req.user;
+    const { path: tempUpload, originalname } = req.file;
+    const filename = `${_id}_${originalname}`;
+    const resultUpload = path.join(avatarsDir, filename);
+
+    await fs.rename(tempUpload, resultUpload);
+    const avatarURL = path.join("avatars", filename);
+
+    Jimp.read(resultUpload, (err, img) => {
+      if (err) throw err;
+
+      img
+        .resize(250, 250) // resize
+        .write(resultUpload); // save
+    });
+
+    const user = await User.findByIdAndUpdate(
+      _id,
+      { avatarURL },
+      { new: true }
+    );
+
+    if (user === null) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    res.status(200).json({ avatarURL: user.avatarURL });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { register, login, logout, current, subscription, upload };
