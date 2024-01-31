@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
     default: "starter",
   },
   token: String,
+  avatarURL: String,
 });
 
 module.exports = mongoose.model("User", userSchema);
