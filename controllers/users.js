@@ -4,8 +4,14 @@ const jwt = require("jsonwebtoken");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const Jimp = require("jimp");
+const sendEmail = require("../helpers/sendEmail");
+const crypto = require("node:crypto");
 
-const { userSchema, subscriptionSchema } = require("../models/joi");
+const {
+  userSchema,
+  subscriptionSchema,
+  verifyEmailSchema,
+} = require("../models/joi");
 const User = require("../models/user");
 
 const avatarsDir = path.join(__dirname, "../", "public", "avatars");
@@ -31,9 +37,18 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomUUID();
+
+    await sendEmail({
+      to: email,
+      subject: "Verify email",
+      html: `To confirm your registration please click on the <a href="http://localhost:3000/api/users/verify/${verificationToken}">link</a>`,
+      text: `To confirm your registration please open the link http://localhost:3000/api/users/verify/${verificationToken}`,
+    });
 
     const result = await User.create({
       email,
+      verificationToken,
       avatarURL: gravatar.url(email, { protocol: "https" }),
       password: passwordHash,
     });
@@ -70,6 +85,10 @@ async function login(req, res, next) {
 
     if (isMatch === false) {
       return res.status(401).json({ message: "Email or password is wrong" });
+    }
+
+    if (user.verify === false) {
+      return res.status(401).send({ message: "Your account is not verified" });
     }
 
     const token = jwt.sign(
@@ -174,4 +193,73 @@ async function upload(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, current, subscription, upload };
+async function userVerification(req, res, next) {
+  const { verificationToken } = req.params;
+
+  try {
+    const user = await User.findOne({ verificationToken });
+
+    if (user === null) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      verify: true,
+      verificationToken: null,
+    });
+
+    res.status(200).json({ message: "Verification successful" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function userRetryVerification(req, res, next) {
+  try {
+    const { email } = req.body;
+
+    const response = verifyEmailSchema.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (typeof response.error !== "undefined") {
+      return res
+        .status(400)
+        .json({ message: response.error.details[0].message });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (user === null) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.verify === true) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+
+    await sendEmail({
+      to: email,
+      subject: "Verify email",
+      html: `To confirm your registration please click on the <a href="http://localhost:3000/api/users/verify/${user.verificationToken}">link</a>`,
+      text: `To confirm your registration please open the link http://localhost:3000/api/users/verify/${user.verificationToken}`,
+    });
+
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  logout,
+  current,
+  subscription,
+  upload,
+  userVerification,
+  userRetryVerification,
+};
