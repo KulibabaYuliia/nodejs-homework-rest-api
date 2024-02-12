@@ -13,6 +13,12 @@ const contactSchema = Joi.object({
   favorite: Joi.boolean(),
 });
 
+const verifyEmailSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "any.required": `missing required email field`,
+  }),
+});
+
 const contactUpdateSchema = Joi.object({
   name: Joi.string(),
   email: Joi.string().email(),
@@ -58,4 +64,5 @@ module.exports = {
   contactUpdateFavoriteSchema,
   userSchema,
   subscriptionSchema,
+  verifyEmailSchema,
 };
